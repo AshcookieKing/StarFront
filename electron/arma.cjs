@@ -297,19 +297,17 @@ function buildLaunchArgs(config, modParam) {
 
   if (modParam) args.push(`-mod=${modParam}`);
   const name = String(config.playerName || config.armaProfileName || '').trim();
-  // -name выбирает профиль; пробелы допустимы как один argv (spawn без shell)
   if (name) args.push(`-name=${name}`);
 
-  if (config.serverHost) {
+  // Автоподключение пропускает главное меню и интро → noise_raw.paa и «нет интро».
+  // По умолчанию запускаем в меню; -connect только если включено в настройках.
+  const autoConnect = config.autoConnectServer === true;
+  if (autoConnect && config.serverHost) {
     args.push(`-connect=${config.serverHost}`);
     if (config.serverPort) args.push(`-port=${config.serverPort}`);
+    const password = String(config.serverPassword || '').trim();
+    if (password) args.push(`-password=${password}`);
   }
-
-  const password = String(config.serverPassword || '').trim();
-  if (password) args.push(`-password=${password}`);
-
-  // Сервер StarFront с BattlEye — -noBattlEye даёт SEH/краш при входе
-  // (флаг в настройках больше не отключает BE при подключении к серверу)
 
   args.push(...sanitizeExtraArgs(config.extraLaunchArgs, { allowNoSplash }));
 

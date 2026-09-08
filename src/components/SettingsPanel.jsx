@@ -514,11 +514,18 @@ export default function SettingsPanel({ settings, onSave, onBack, api, discord, 
                 spellCheck={false}
                 value={form.serverPassword || ''}
                 onChange={(e) => set('serverPassword', e.target.value)}
-                placeholder="Если сервер запаролен — введите пароль"
+                placeholder="Пароль сервера"
               />
             </label>
+            <Toggle
+              checked={form.autoConnectServer === true}
+              onChange={(v) => set('autoConnectServer', v)}
+              label="Сразу подключаться к серверу"
+              hint="Выкл = сначала интро и меню (рекомендуется). Вкл = -connect без интро"
+            />
             <p className="block-hint">
-              При СТАРТ лаунчер подключится с `-password`. Оставьте пустым, если пароля нет.
+              Сервер: 109.248.4.45:2302 · пароль из поля выше. При выключенном автоподключении зайдите через
+              мультиплеер Arma после интро.
             </p>
             <label className="field">
               <span>Пароль TeamSpeak</span>

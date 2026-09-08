@@ -1,6 +1,6 @@
 # StarFrontLauncher
 
-**Версия:** 1.2.20-alpha  
+**Версия:** 1.2.21-alpha  
 **Платформа:** Windows 10/11 (x64)
 
 Десктопный лаунчер для тактического RP-сервера **StarFront** (Arma 3 — Clone Wars).

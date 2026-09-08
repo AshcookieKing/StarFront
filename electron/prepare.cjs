@@ -123,6 +123,13 @@ async function prepareAndLaunch({ mods, config, onProgress, onDiscordRefresh }) 
   if (skipped.length) {
     onProgress(94, `В запуск без ${skipped.length} мод(ов) — проверьте Steam`);
   }
+  if (config.autoConnectServer !== true) {
+    onProgress(
+      96,
+      `Интро/меню · сервер ${config.serverHost || '109.248.4.45'}:${config.serverPort || 2302}` +
+        (config.serverPassword ? ` · пароль ${config.serverPassword}` : '')
+    );
+  }
   const launchResult = await arma.launchGame(config, modParam);
   onProgress(100, 'Игра запускается');
   return {

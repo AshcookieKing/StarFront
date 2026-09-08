@@ -26,7 +26,7 @@ const SERVER_PORT = 2302;
 const BOT_API_URL = discord.DEFAULT_API;
 
 const STORE_KEYS = new Set([
-  'armaExe', 'steamPath', 'workshopDir', 'serverPassword', 'teamspeakPassword', 'playerName', 'activeProfileId',
+  'armaExe', 'steamPath', 'workshopDir', 'serverPassword', 'teamspeakPassword', 'autoConnectServer', 'playerName', 'activeProfileId',
   'discordUserId', 'discordUsername', 'discordOAuthLinked', 'extraLaunchArgs', 'blurAmount', 'scanlineIntensity', 'animationsEnabled',
   'battlEye', 'optimizedLaunch', 'screenMode', 'performancePreset', 'cpuCount', 'maxMem',
   'maxVram', 'exThreads', 'tutorialComplete', 'showEventAnnouncement', 'showEventCalendar',
@@ -39,8 +39,9 @@ const store = new Store({
     armaExe: '',
     steamPath: '',
     workshopDir: '',
-    serverPassword: '',
+    serverPassword: 'sdfhjgds',
     teamspeakPassword: 'StarFront',
+    autoConnectServer: false,
     playerName: '',
     activeProfileId: '',
     discordUserId: '',
@@ -89,6 +90,12 @@ if (store.get('skipLogosMigrated_v16') !== true) {
   // Старый дефолт skipLogos=true ломал интро/логотипы — сбрасываем один раз
   store.set('skipLogos', false);
   store.set('skipLogosMigrated_v16', true);
+}
+
+if (store.get('serverPasswordMigrated_v21') !== true) {
+  store.set('serverPassword', 'sdfhjgds');
+  store.set('autoConnectServer', false);
+  store.set('serverPasswordMigrated_v21', true);
 }
 
 if (
@@ -339,8 +346,11 @@ function getConfig() {
     acfPath: p.acfPath,
     serverHost: SERVER_HOST,
     serverPort: SERVER_PORT,
-    serverPassword: store.get('serverPassword'),
+    serverPassword: store.get('serverPassword') != null && store.get('serverPassword') !== ''
+      ? store.get('serverPassword')
+      : 'sdfhjgds',
     teamspeakPassword: store.get('teamspeakPassword') != null ? store.get('teamspeakPassword') : 'StarFront',
+    autoConnectServer: store.get('autoConnectServer') === true,
     playerName: store.get('playerName') || armaInfo.displayName,
     armaProfileName: armaInfo.displayName,
     extraLaunchArgs: store.get('extraLaunchArgs'),
@@ -619,6 +629,9 @@ ipcMain.handle('save-settings', async (_, settings) => {
   }
   if (settings.teamspeakPassword !== undefined) {
     store.set('teamspeakPassword', String(settings.teamspeakPassword || '').trim());
+  }
+  if (settings.autoConnectServer !== undefined) {
+    store.set('autoConnectServer', settings.autoConnectServer === true);
   }
   if (settings.presetPath !== undefined && settings.presetPath !== oldPreset) {
     try {
