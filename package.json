@@ -1,6 +1,6 @@
 {
   "name": "starfront-launcher",
-  "version": "1.2.18-alpha",
+  "version": "1.2.19-alpha",
   "description": "StarFront — Arma 3 Launcher",
   "author": "StarFront",
   "main": "electron/main.cjs",
@@ -33,7 +33,6 @@
     ],
     "extraResources": [
       { "from": "preset", "to": "preset" },
-      { "from": "electron/bin/sfcm", "to": "sfcm" },
       {
         "from": "bot-manager-python/resources",
         "to": "online-bot",

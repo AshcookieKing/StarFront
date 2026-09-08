@@ -1,6 +1,5 @@
 const arma = require('./arma.cjs');
 const { ensureTeamSpeak } = require('./teamspeak.cjs');
-const sfcm = require('./sfcm-menu.cjs');
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -44,6 +43,11 @@ async function prepareAndLaunch({ mods, config, onProgress, onDiscordRefresh }) 
   if (onDiscordRefresh) {
     onDiscordRefresh().catch(() => {});
   }
+
+  // Старый runtime @SF_CHAR_MENU больше не используется — подчистить, если остался
+  try {
+    require('./sfcm-menu.cjs').cleanupMenuMod();
+  } catch {}
 
   onProgress(10, 'Синхронизация с Arma 3…');
   arma.syncWorkshopWithArma(config);
@@ -113,22 +117,8 @@ async function prepareAndLaunch({ mods, config, onProgress, onDiscordRefresh }) 
     onProgress(92, `TeamSpeak: ${e.message || 'пропуск'}`);
   }
 
-  onProgress(93, 'Сборка StarFront меню…');
-  let menuModPath = null;
-  try {
-    menuModPath = sfcm.deployMenuMod();
-    onProgress(94, 'Меню собрано');
-  } catch (e) {
-    return {
-      ok: false,
-      error: `Не удалось собрать меню: ${e.message || e}`,
-      mods: checked,
-    };
-  }
-
   onProgress(95, 'Запуск Arma 3…');
-  let modParam = arma.buildModParam(checked);
-  modParam = sfcm.appendModParam(modParam, menuModPath);
+  const modParam = arma.buildModParam(checked);
   const skipped = checked.filter((m) => m.status === 'missing' || !m.path);
   if (skipped.length) {
     onProgress(94, `В запуск без ${skipped.length} мод(ов) — проверьте Steam`);
@@ -139,7 +129,6 @@ async function prepareAndLaunch({ mods, config, onProgress, onDiscordRefresh }) 
     ok: true,
     pid: launchResult.pid,
     modCount: modParam.split(';').filter(Boolean).length,
-    menuDeployed: Boolean(menuModPath),
   };
 }
 

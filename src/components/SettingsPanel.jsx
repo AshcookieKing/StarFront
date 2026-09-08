@@ -554,12 +554,7 @@ export default function SettingsPanel({ settings, onSave, onBack, api, discord, 
                 <option value="ultra">Ультра — 16 ядер, 32 GB</option>
               </select>
             </label>
-            <Toggle
-              checked={form.battlEye !== false}
-              onChange={(v) => set('battlEye', v)}
-              label="BattlEye"
-              hint="Античит сервера"
-            />
+            <p className="block-hint">BattlEye всегда включён — сервер StarFront требует античит.</p>
             <Toggle
               checked={form.optimizedLaunch === true}
               onChange={(v) => set('optimizedLaunch', v)}

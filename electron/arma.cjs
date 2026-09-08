@@ -17,6 +17,7 @@ const BANNED_LAUNCH_ARGS = new Set([
   '-nosplash',
   '-world=empty',
   '-worldempty',
+  '-nobattleye',
 ]);
 
 function performanceArgs(config) {
@@ -283,7 +284,8 @@ function buildLaunchArgs(config, modParam) {
   else args.push('-noBorder');
 
   if (modParam) args.push(`-mod=${modParam}`);
-  const name = config.playerName || config.armaProfileName;
+  const name = String(config.playerName || config.armaProfileName || '').trim();
+  // -name выбирает профиль; пробелы допустимы как один argv (spawn без shell)
   if (name) args.push(`-name=${name}`);
 
   if (config.serverHost) {
@@ -294,7 +296,8 @@ function buildLaunchArgs(config, modParam) {
   const password = String(config.serverPassword || '').trim();
   if (password) args.push(`-password=${password}`);
 
-  if (config.battlEye === false) args.push('-noBattlEye');
+  // Сервер StarFront с BattlEye — -noBattlEye даёт SEH/краш при входе
+  // (флаг в настройках больше не отключает BE при подключении к серверу)
 
   args.push(...sanitizeExtraArgs(config.extraLaunchArgs, { allowNoSplash }));
 

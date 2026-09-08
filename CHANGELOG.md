@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.19-alpha
+
+- Убрана сборка/встройка `@SF_CHAR_MENU` (EBUSY + краш при запуске)
+- BattlEye всегда включён при входе на сервер (убран `-noBattlEye`)
+
 ## 1.2.18-alpha
 
 - Фикс запуска Arma: снова прямой старт exe (Steam `-applaunch` не поднимал игру)

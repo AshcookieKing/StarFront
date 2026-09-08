@@ -164,9 +164,6 @@ function watchGameProcess(pid, webContents) {
     if (seenRunning && !pidRunning && !armaRunning) {
       clearInterval(gameWatchTimer);
       gameWatchTimer = null;
-      try {
-        require('./sfcm-menu.cjs').cleanupMenuMod();
-      } catch {}
       if (!webContents.isDestroyed()) {
         webContents.send('launch-reset');
       }
@@ -604,6 +601,7 @@ ipcMain.handle('save-settings', async (_, settings) => {
   // Интро всегда включено — игнорируем старые сохранённые флаги
   store.set('skipIntro', false);
   store.set('staticMenuBackground', false);
+  store.set('battlEye', true);
   if (settings.extraLaunchArgs !== undefined) {
     const cleaned = String(settings.extraLaunchArgs || '')
       .split(/\s+/)
