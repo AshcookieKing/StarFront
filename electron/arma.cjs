@@ -6,9 +6,9 @@ const { autoResolvePaths, ARMA_APP_ID, parseLibraryFolders } = require('./paths.
 
 const PERFORMANCE_PRESETS = {
   low: { cpuCount: 4, exThreads: 2, maxMem: 4096, maxVram: 1024, hugePages: false },
-  medium: { cpuCount: 8, exThreads: 4, maxMem: 8192, maxVram: 2048, hugePages: true },
-  high: { cpuCount: 12, exThreads: 5, maxMem: 16384, maxVram: 3072, hugePages: true },
-  ultra: { cpuCount: 16, exThreads: 7, maxMem: 32768, maxVram: 4096, hugePages: true },
+  medium: { cpuCount: 8, exThreads: 4, maxMem: 8192, maxVram: 2048, hugePages: false },
+  high: { cpuCount: 12, exThreads: 5, maxMem: 16384, maxVram: 3072, hugePages: false },
+  ultra: { cpuCount: 16, exThreads: 7, maxMem: 32768, maxVram: 4096, hugePages: false },
 };
 
 /** Параметры, которые ломают интро StarFront / меню и часто дают Cannot load mipmap … noise_raw.paa */
@@ -18,6 +18,7 @@ const BANNED_LAUNCH_ARGS = new Set([
   '-world=empty',
   '-worldempty',
   '-nobattleye',
+  '-hugepages',
 ]);
 
 function performanceArgs(config) {
@@ -25,9 +26,14 @@ function performanceArgs(config) {
   const cpu = config.cpuCount || preset.cpuCount;
   const mem = config.maxMem || preset.maxMem;
   const vram = config.maxVram || preset.maxVram;
-  const args = ['-cpuCount=' + cpu, '-exThreads=' + (config.exThreads || preset.exThreads), '-maxMem=' + mem, '-maxVram=' + vram];
-  if (preset.hugePages !== false) args.push('-hugePages', '-enableHT');
-  return args;
+  // Без -hugePages: на многих ПК без SeLockMemoryPrivilege процесс «висит» без окна
+  return [
+    '-cpuCount=' + cpu,
+    '-exThreads=' + (config.exThreads || preset.exThreads),
+    '-maxMem=' + mem,
+    '-maxVram=' + vram,
+    '-enableHT',
+  ];
 }
 
 function normalizeArgKey(arg) {
@@ -67,12 +73,20 @@ function resolveArmaExe(config) {
   return base;
 }
 
-function ensureSteamAppId(armaDir) {
+function removeSteamAppId(armaDir) {
+  // steam_appid.txt в Steam-установке Arma ломает запуск: процесс висит без окна
   try {
     const file = path.join(armaDir, 'steam_appid.txt');
-    if (!fs.existsSync(file)) {
-      fs.writeFileSync(file, `${ARMA_APP_ID}\n`, 'utf8');
-    }
+    if (fs.existsSync(file)) fs.unlinkSync(file);
+  } catch {
+    /* ignore */
+  }
+}
+
+async function ensureSteamRunning(config) {
+  try {
+    const { ensureSteamClient } = require('./steam-workshop.cjs');
+    await ensureSteamClient(config);
   } catch {
     /* ignore */
   }
@@ -270,12 +284,10 @@ function buildLaunchArgs(config, modParam) {
   // Логотипы BI: только по явному флагу. Оптимизированный запуск их НЕ пропускает.
   if (allowNoSplash) args.push('-noSplash');
 
-  // Интро StarFront / меню: никогда -skipIntro / -world=empty
+  // Perf-флаги только при «Оптимизированный запуск» — иначе лишние -maxMem/-cpuCount
+  // иногда дают долгий чёрный экран / «висящий» процесс без окна
   if (config.optimizedLaunch === true) {
-    // Только perf: profiling.exe выбирается в resolveArmaExe
     args.push('-noPause', ...performanceArgs(config));
-  } else if (config.performancePreset && config.performancePreset !== 'off') {
-    args.push(...performanceArgs(config));
   }
 
   const mode = config.screenMode || 'borderless';
@@ -305,23 +317,29 @@ function buildLaunchArgs(config, modParam) {
   return args.filter((a) => !isBannedLaunchArg(a, { allowNoSplash }));
 }
 
-function launchGame(config, modParam) {
-  return new Promise((resolve, reject) => {
-    const armaExe = resolveArmaExe(config);
-    if (!fs.existsSync(armaExe)) {
-      reject(new Error('Arma 3 не найдена. Установите игру через Steam.'));
-      return;
-    }
-    const armaDir = path.dirname(armaExe);
-    ensureSteamAppId(armaDir);
+async function launchGame(config, modParam) {
+  const armaExe = resolveArmaExe(config);
+  if (!fs.existsSync(armaExe)) {
+    throw new Error('Arma 3 не найдена. Установите игру через Steam.');
+  }
+  const armaDir = path.dirname(armaExe);
+  removeSteamAppId(armaDir);
+  await ensureSteamRunning(config);
 
-    const args = buildLaunchArgs(config, modParam);
-    // Прямой запуск exe: Steam -applaunch часто не стартует игру с длинным -mod=
+  const args = buildLaunchArgs(config, modParam);
+
+  return new Promise((resolve, reject) => {
+    // Без windowsHide — иначе GUI иногда не появляется и процесс «висит» в фоне
     const child = spawn(armaExe, args, {
       cwd: armaDir,
       detached: true,
       stdio: 'ignore',
-      windowsHide: true,
+      windowsHide: false,
+      env: {
+        ...process.env,
+        SteamAppId: String(ARMA_APP_ID),
+        SteamGameId: String(ARMA_APP_ID),
+      },
     });
 
     child.on('error', (err) => {
@@ -329,6 +347,10 @@ function launchGame(config, modParam) {
     });
 
     const pid = child.pid;
+    if (!pid) {
+      reject(new Error('Arma 3 не стартовала (нет PID)'));
+      return;
+    }
     child.unref();
     resolve({
       ok: true,
